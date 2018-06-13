@@ -1,0 +1,137 @@
+/* VIEW For finding how many orders have been shipped */ 
+/*
+CREATE VIEW vTotalShipped AS
+SELECT  TblOrderLine.OrderID,
+		TblOrderLine.ItemID,
+		SUM(ISNULL(TblShipLine.QtyShipped, 0)) TotalShipped
+FROM TblShipLine
+RIGHT OUTER JOIN TblOrderLine
+ON TblOrderLine.OrderID = TblShipLine.OrderID AND TblOrderLine.ItemID = TblShipLine.ItemID
+GROUP BY TblOrderLine.OrderID, TblOrderLine.ItemID
+
+
+/* VIEW For Customer Ordered Item information */
+
+CREATE VIEW vCustomerOrderShippingInfo AS
+SELECT  TblOrder.OrderID,
+		CONVERT(VARCHAR, OrderDate, 107) OrderDate,
+		TblCustomer.LastName + ', ' + SUBSTRING(TblCustomer.FirstName, 1, 1) + '.' CustomerName,
+		TblOrderLine.ItemID,
+		TblItem.Description,
+		TblOrderLine.Quantity QuantityOrdered,
+		vTotalShipped.TotalShipped,
+		TblOrderLine.Quantity - vTotalShipped.TotalShipped QuantityRemaining,
+		CASE 
+			WHEN vTotalShipped.TotalShipped = 0 THEN 'Not Shipped'
+			WHEN TblOrderLine.Quantity - vTotalShipped.TotalShipped = 0 THEN 'Completely Shipped'
+			WHEN TblOrderLine.Quantity - vTotalShipped.TotalShipped < 0 THEN 'Over Shipped'
+			WHEN TblOrderLine.Quantity - vTotalShipped.TotalShipped > 0 THEN 'Partially Shipped'
+			END ShippingStatus
+FROM TblOrder
+INNER JOIN TblCustomer
+ON TblCustomer.CustomerID = TblOrder.CustomerID
+INNER JOIN TblOrderLine
+ON TblOrderLine.OrderID = TblOrder.OrderID
+INNER JOIN TblItem
+ON TblItem.ItemID = TblOrderLine.ItemID
+INNER JOIN vTotalShipped
+ON vTotalShipped.OrderID = TblOrder.OrderID AND vTotalShipped.ItemID = TblOrderLine.ItemID
+
+*/
+/*
+/* VIEW For Open Orders */
+CREATE VIEW vOpenOrders AS
+SELECT OrderID
+FROM vCustomerOrderShippingInfo
+WHERE vCustomerOrderShippingInfo.QuantityOrdered - vCustomerOrderShippingInfo.TotalShipped > 0 OR vCustomerOrderShippingInfo.TotalShipped = 0
+GROUP BY OrderID
+
+
+
+
+/* VIEW For Customer + Order + Orderline + ShippingLine Information. Typically needed to find what 
+   customers are tied to what orders and their shipping status */ 
+   /*
+CREATE VIEW vCustomerShippingStats AS 
+SELECT	TblOrder.OrderID,
+		CONVERT(VARCHAR, TblOrder.OrderDate, 107) OrderDate,
+		TblCustomer.CustomerID,
+		TblCustomer.LastName + ', ' + TblCustomer.FirstName CustomerName,
+		MIN(CONVERT(VARCHAR, TblShipLine.DateShipped, 107)) FirstDayShipped,
+		MAX(CONVERT(VARCHAR, TblShipLine.DateShipped, 107)) LastDayShipped,
+		DATEDIFF(DAY, MIN(TblShipLine.DateShipped), MAX(TblShipLine.DateShipped)) DaysDifferenceShipping,
+		DATEDIFF(DAY, TblOrder.OrderDate, MAX(TblShipLine.DateShipped)) DaysDifferenceOrderToLastShip
+FROM TblCustomer
+INNER JOIN TblOrder
+ON TblOrder.CustomerID = TblCustomer.CustomerID
+INNER JOIN TblOrderLine
+ON TblOrderLine.OrderID = TblOrder.OrderID
+INNER JOIN TblShipLine
+ON TblShipLine.OrderID = TblOrderLine.OrderID AND TblShipLine.ItemID = TblOrderLine.ItemID
+GROUP BY TblOrder.OrderID, TblOrder.OrderDate, TblCustomer.CustomerID, TblCustomer.LastName, TblCustomer.FirstName
+*/
+
+/*
+CREATE VIEW vLastCost AS
+SELECT  TblItem.ItemID,
+		ISNULL(TblItemCostHistory.LastCost, 0) LastCostPaid,
+		TblItemCostHistory.LastCostDate
+FROM TblItem
+FULL OUTER JOIN TblItemCostHistory
+ON TblItem.ItemID = TblItemCostHistory.ItemID
+WHERE TblItemCostHistory.LastCostDate IN (SELECT MAX(LastCostDate)
+										 FROM TblItemCostHistory		 					 
+										 WHERE TblItem.ItemID = TblItemCostHistory.ItemID
+										 GROUP BY ItemID) OR TblItemCostHistory.LastCostDate IS NULL
+
+
+
+CREATE VIEW vMinPrice AS
+SELECT	ItemID,
+		MIN(Price) MinimumPrice
+FROM TblOrderLine
+GROUP BY ItemID
+
+
+
+
+CREATE VIEW vProfitPerOrder AS
+SELECT	TblOrderLine.OrderID,
+		SUM((TblOrderLine.Price * TblOrderLine.Quantity) - (vLastCost.LastCostPaid * tblorderline.Quantity)) OrderProfit
+FROM TblOrderLine
+INNER JOIN vLastCost
+ON vLastCost.ItemID = TblOrderLine.ItemID
+GROUP BY OrderID
+*/
+
+/* TOTAL QUANTITY */
+/*
+CREATE VIEW vTotalQuantitySold AS
+SELECT	TblOrderLine.ItemID,
+		TblCustomer.State,
+		SUM(TblOrderLine.Quantity) TotalQuantity
+FROM TblCustomer
+INNER JOIN TblOrder
+ON TblOrder.CustomerID = TblCustomer.CustomerID
+INNER JOIN TblOrderLine
+ON TblOrderLine.OrderID = TblOrder.OrderID
+INNER JOIN TblItem
+ON TblItem.ItemID = TblOrderLine.ItemID
+GROUP BY TblOrderLine.ItemID, tblCustomer.State
+
+*/
+
+/*
+CREATE VIEW vCustomerOrderInformation AS
+SELECT	TblCustomer.FirstName,
+		TblCustomer.LastName,
+		TblCustomer.City,
+		TblCustomer.State
+FROM TblCustomer
+INNER JOIN TblOrder
+ON TblOrder.CustomerID = TblCustomer.CustomerID
+INNER JOIN TblOrderLine
+ON TblOrderLine.OrderID = TblOrder.OrderID
+INNER JOIN TblItem
+ON TblItem.ItemID = TblOrderLine.ItemID
+*/

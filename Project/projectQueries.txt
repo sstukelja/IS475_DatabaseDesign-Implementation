@@ -1,0 +1,331 @@
+/* QUESTION 1 */
+
+SELECT	WorkOrder.WorkOrderID,
+		WorkOrderTask.TaskID,
+		TaskType.TypeDescription,
+		CAST(WorkOrderTask.EstimatedHours AS DECIMAL(10, 2)) EstimatedHours,
+		CASE 
+			WHEN vActualHoursPerWorkOrderTask.ActualHoursWorked IS NULL
+			THEN 0
+			ELSE CAST(vActualHoursPerWorkOrderTask.ActualHoursWorked AS DECIMAL(10, 2))
+		END ActualHoursWorked,
+		CAST(WorkOrderTask.EstimatedLaborPrice AS DECIMAL(10, 2)) EstimatedLaborPrice,
+		CASE 
+			WHEN vActualLaborCostPerWorkOrderTask.ActualLaborCost IS NULL
+			THEN 0
+			ELSE CAST(vActualLaborCostPerWorkOrderTask.ActualLaborCost AS DECIMAL(10, 2))
+		END ActualLaborCost,
+		CAST(WorkOrderTask.EstimatedMaterialCosts AS DECIMAL(10, 2)) EstimatedMaterialCost,
+		CASE 
+			WHEN vActualMaterialCostPerWorkOrderTask.ActualMaterialCost IS NULL
+			THEN 0
+			ELSE CAST(vActualMaterialCostPerWorkOrderTask.ActualMaterialCost AS DECIMAL(10, 2))
+		END ActualMaterialCost,
+		CASE 
+			WHEN TaskStatusType.StatusDescription = 'Completed' THEN 0 
+			ELSE
+				CASE
+				WHEN vActualHoursPerWorkOrderTask.ActualHoursWorked IS NULL
+				THEN WorkOrderTask.EstimatedHours
+				ELSE CAST((WorkOrderTask.EstimatedHours - vActualHoursPerWorkOrderTask.ActualHoursWorked) AS DECIMAL (10, 2))
+			END
+		END LaborToFinish,
+		CASE 
+		WHEN TaskStatusType.StatusDescription = 'Completed' THEN 0 
+		ELSE
+			CASE
+			WHEN vActualMaterialCostPerWorkOrderTask.ActualMaterialCost IS NULL
+			THEN WorkOrderTask.EstimatedMaterialCosts
+			ELSE CAST((WorkOrderTask.EstimatedMaterialCosts - vActualMaterialCostPerWorkOrderTask.ActualMaterialCost) AS DECIMAL(10, 2))
+			END
+		END MaterialToFinish,
+		TaskStatusType.StatusDescription
+FROM WorkOrder
+INNER JOIN WorkOrderTask
+ON WorkOrderTask.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN TaskStatusType
+ON TaskStatusType.TaskStatusTypeID = WorkOrderTask.TaskStatusID
+INNER JOIN TaskType
+ON TaskType.TaskTypeID = WorkOrderTask.TaskTypeID
+LEFT OUTER JOIN vActualHoursPerWorkOrderTask
+ON vActualHoursPerWorkOrderTask.WorkOrderID = WorkOrder.WorkOrderID AND vActualHoursPerWorkOrderTask.TaskID = WorkOrderTask.TaskID
+LEFT OUTER JOIN vActualLaborCostPerWorkOrderTask
+ON vActualLaborCostPerWorkOrderTask.WorkOrderID = WorkOrder.WorkOrderID AND vActualLaborCostPerWorkOrderTask.TaskID = WorkOrderTask.TaskID
+LEFT OUTER JOIN vActualMaterialCostPerWorkOrderTask
+ON vActualMaterialCostPerWorkOrderTask.WorkOrderID = WorkOrder.WorkOrderID AND vActualMaterialCostPerWorkOrderTask.TaskID = WorkOrderTask.TaskID
+WHERE WorkOrder.WorkOrderID = '16885';
+
+/* QUESTION 2 */
+
+SELECT	WorkOrder.WorkOrderID,
+		TaskType.TypeDescription,
+		CONVERT(VARCHAR, WorkOrderTask.DateCompleted, 107) DateCompleted,
+		CAST(WorkOrderTask.EstimatedHours AS DECIMAL(10, 2)) EstimatedHours,
+		CAST(vActualHoursPerWorkOrderTask.ActualHoursWorked AS DECIMAL(10, 2)) ActualHoursWorked,
+		CAST(WorkOrderTask.EstimatedLaborPrice AS DECIMAL(10, 2)) EstimatedLaborCost,
+		CAST(vActualLaborCostPerWorkOrderTask.ActualLaborCost AS DECIMAL(10, 2)) ActualLaborCost,
+		CAST((vActualLaborCostPerWorkOrderTask.ActualLaborCost - WorkOrderTask.EstimatedLaborPrice) AS DECIMAL(10, 2)) VarianceInLaborCost,
+		CAST(WorkOrderTask.EstimatedMaterialCosts AS DECIMAL(10, 2)) EstimatedMaterialCost,
+		ISNULL(CAST(CAST(vActualMaterialCostPerWorkOrderTask.ActualMaterialCost AS DECIMAL(10, 2)) AS VARCHAR), 'N/A') ActualMaterialCost,
+		ISNULL(CAST(CAST((vActualMaterialCostPerWorkOrderTask.ActualMaterialCost - WorkOrderTask.EstimatedMaterialCosts) AS DECIMAL(10, 2)) AS VARCHAR), 'N/A') VarianceInMaterialCost
+FROM WorkOrder
+INNER JOIN vClosedWorkOrders
+ON vClosedWorkOrders.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN WorkOrderTask
+ON WorkOrderTask.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN TaskType
+ON TaskType.TaskTypeID = WorkOrderTask.TaskTypeID
+INNER JOIN vActualHoursPerWorkOrderTask
+ON vActualHoursPerWorkOrderTask.WorkOrderID = WorkOrder.WorkOrderID AND vActualHoursPerWorkOrderTask.TaskID = WorkOrderTask.TaskID
+INNER JOIN vActualLaborCostPerWorkOrderTask
+ON vActualLaborCostPerWorkOrderTask.WorkOrderID = WorkOrder.WorkOrderID AND vActualLaborCostPerWorkOrderTask.TaskID = WorkOrderTask.TaskID
+LEFT OUTER JOIN vActualMaterialCostPerWorkOrderTask
+ON vActualMaterialCostPerWorkOrderTask.WorkOrderID = Workorder.WorkOrderID AND vActualMaterialCostPerWorkOrderTask.TaskID = WorkOrderTask.TaskID
+ORDER BY WorkOrder.WorkOrderID
+
+/* QUESTION 3 */
+
+SELECT	WorkOrder.WorkOrderID,
+		Customer.CustomerName,
+		CONVERT(VARCHAR, vDateStartedPerWorkOrder.DateStarted, 107) DateStarted,
+		CONVERT(VARCHAR, WorkOrder.DecisionDate, 107) DecisionDate,
+		CONVERT(VARCHAR, vDateCompletedPerWorkOrder.DateCompleted, 107) DateCompleted,
+		CAST(vTotalEstCostPerWorkOrder.TotalCost AS DECIMAL(10, 2)) TotalEstimatedLaborCost,
+		CAST(vActualTotalLaborCostPerWorkOrder.ActualLaborCost AS DECIMAL(10, 2)) ActualLaborCost,
+		CAST((vTotalEstCostPerWorkOrder.TotalCost - vActualTotalLaborCostPerWorkOrder.ActualLaborCost) AS DECIMAL(10, 2)) LaborCostVariance,
+		CAST(vTotalEstMaterialCostPerWorkOrder.TotalEstMaterialCost AS DECIMAL(10, 2)) TotalEstMaterialCost,
+		CAST(vActualMaterialCostPerWorkOrder.ActualMaterialCost AS DECIMAL(10, 2)) ActualMaterialCost,
+		CAST((vTotalEstMaterialCostPerWorkOrder.TotalEstMaterialCost - vActualMaterialCostPerWorkOrder.ActualMaterialCost) AS DECIMAL(10, 2)) MaterialCostVariance,
+		CAST(((vActualMaterialCostPerWorkOrder.ActualMaterialCost + vActualTotalLaborCostPerWorkOrder.ActualLaborCost) - (vTotalEstMaterialCostPerWorkOrder.TotalEstMaterialCost + vTotalEstCostPerWorkOrder.TotalCost)) AS DECIMAL(10, 2)) ProfitLoss
+FROM WorkOrder
+INNER JOIN vClosedWorkOrders
+ON vClosedWorkOrders.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN Customer
+ON Customer.CustomerID = WorkOrder.CustomerID
+INNER JOIN vDateStartedPerWorkOrder
+ON vDateStartedPerWorkOrder.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN vDateCompletedPerWorkOrder
+ON vDateCompletedPerWorkOrder.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN vTotalEstCostPerWorkOrder
+ON vTotalEstCostPerWorkOrder.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN vActualTotalLaborCostPerWorkOrder
+ON vActualTotalLaborCostPerWorkOrder.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN vTotalEstMaterialCostPerWorkOrder
+ON vTotalEstMaterialCostPerWorkOrder.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN vActualMaterialCostPerWorkOrder
+ON vActualMaterialCostPerWorkOrder.WorkOrderID = workorder.WorkOrderID
+ORDER BY WorkOrder.WorkOrderID
+
+
+/* QUESTION 4 */
+
+SELECT	WorkOrder.WorkOrderID,
+		vCompletedWorkOrderStats.CustomerName,
+		CONVERT(VARCHAR, vCompletedWorkOrderStats.DateStarted, 107) DateStarted,
+		CONVERT(VARCHAR, vCompletedWorkOrderStats.DateCompleted, 107) DateCompleted,
+		CAST((vCompletedWorkOrderStats.TotalEstimatedLaborCost + vCompletedWorkOrderStats.TotalEstMaterialCost) AS DECIMAL(10, 2)) EstTotalAmount,
+		CAST((vCompletedWorkOrderStats.ActualLaborCost + vCompletedWorkOrderStats.ActualMaterialCost) AS DECIMAL(10, 2)) TotalAmount,
+		CAST(((vCompletedWorkOrderStats.TotalEstimatedLaborCost + vCompletedWorkOrderStats.TotalEstMaterialCost) - (vCompletedWorkOrderStats.ActualLaborCost + vCompletedWorkOrderStats.ActualMaterialCost)) AS DECIMAL(10, 2)) TotalVariance
+FROM WorkOrder
+INNER JOIN vCompletedWorkOrderStats
+ON vCompletedWorkOrderStats.WorkOrderID = WorkOrder.WorkOrderID
+WHERE ((vCompletedWorkOrderStats.TotalEstimatedLaborCost + vCompletedWorkOrderStats.TotalEstMaterialCost) - (vCompletedWorkOrderStats.ActualLaborCost + vCompletedWorkOrderStats.ActualMaterialCost)) = (SELECT MAX((vCompletedWorkOrderStats.TotalEstimatedLaborCost + vCompletedWorkOrderStats.TotalEstMaterialCost) - (vCompletedWorkOrderStats.ActualLaborCost + vCompletedWorkOrderStats.ActualMaterialCost)) FROM vCompletedWorkOrderStats)
+
+
+/* QUESTION 5 */
+
+
+SELECT	WorkOrder.WorkOrderID,
+		vCompletedWorkOrderStats.CustomerName,
+		CONVERT(VARCHAR, vCompletedWorkOrderStats.DateStarted, 107) DateStarted,
+		CONVERT(VARCHAR, vCompletedWorkOrderStats.DateCompleted, 107) DateCompleted,
+		CAST((vCompletedWorkOrderStats.TotalEstimatedLaborCost + vCompletedWorkOrderStats.TotalEstMaterialCost) AS DECIMAL(10, 2)) EstTotalAmount,
+		CAST((vCompletedWorkOrderStats.ActualLaborCost + vCompletedWorkOrderStats.ActualMaterialCost) AS DECIMAL(10, 2)) TotalAmount,
+		CAST(CAST((vCompletedWorkOrderStats.ActualLaborCost + vCompletedWorkOrderStats.ActualMaterialCost) / (vCompletedWorkOrderStats.TotalEstimatedLaborCost + vCompletedWorkOrderStats.TotalEstMaterialCost) AS DECIMAL(10, 4)) AS VARCHAR) + '%' TotalOverBudget
+FROM WorkOrder
+INNER JOIN vCompletedWorkOrderStats
+ON vCompletedWorkOrderStats.WorkOrderID = WorkOrder.WorkOrderID
+WHERE ((vCompletedWorkOrderStats.ActualLaborCost + vCompletedWorkOrderStats.ActualMaterialCost) / (vCompletedWorkOrderStats.TotalEstimatedLaborCost + vCompletedWorkOrderStats.TotalEstMaterialCost)) = (SELECT MAX((vCompletedWorkOrderStats.ActualLaborCost + vCompletedWorkOrderStats.ActualMaterialCost) / (vCompletedWorkOrderStats.TotalEstimatedLaborCost + vCompletedWorkOrderStats.TotalEstMaterialCost)) FROM vCompletedWorkOrderStats)
+
+
+
+/* QUESTION 6 */
+
+SELECT	TaskType.TypeDescription,
+		TaskType.TaskTypeID,
+		ISNULL(CAST(CAST(((vActualHoursPerTaskType.ActualHours - vHoursPerTaskType.EstHours) / 2) AS DECIMAL(10, 3)) AS VARCHAR), 'N/A') AverageDifferenceOfHoursWorked
+FROM vActualHoursPerTaskType
+INNER JOIN vHoursPerTaskType
+ON vHoursPerTaskType.TaskID = vActualHoursPerTaskType.TaskID
+RIGHT OUTER JOIN TaskType
+ON TaskType.TaskTypeID = vActualHoursPerTaskType.TaskID
+ORDER BY TaskType.TaskTypeID
+
+/* QUESTION 7 */
+
+SELECT	Customer.CustomerID,
+		Customer.CustomerName,
+		COUNT(WorkOrder.CustomerID) CountofWorkOrders,
+		COUNT(vClosedWorkOrders.WorkOrderID) CountOfCompletedWorkOrders,
+		COUNT(WorkOrder.CustomerID) - COUNT(vClosedWorkOrders.WorkOrderID) CountOfOpenWorkOrders,
+		CAST(AVG(vTotalEstCostPerWorkOrder.TotalCost) AS DECIMAL(10, 2)) AverageEstLaborCost,
+		CAST(AVG(vTotalActualLaborCostPerWorkOrder.TotalActualLaborCost) AS DECIMAL(10, 2)) AverageActualLaborCost,
+		CAST(AVG(vTotalEstMaterialCostPerWorkOrder.TotalEstMaterialCost) AS DECIMAL(10, 2)) AverageEstMaterialCost,
+		CAST(AVG(vActualMaterialCostPerWorkOrder.ActualMaterialCost) AS DECIMAL(10, 2)) AverageActualMaterialCost
+FROM Customer
+INNER JOIN WorkOrder
+ON Customer.CustomerID = WorkOrder.CustomerID
+LEFT OUTER JOIN vClosedWorkOrders
+ON vClosedWorkOrders.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN vTotalEstCostPerWorkOrder
+ON vTotalEstCostPerWorkOrder.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN vTotalEstMaterialCostPerWorkOrder
+ON vTotalEstMaterialCostPerWorkOrder.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN vTotalActualLaborCostPerWorkOrder
+ON vTotalActualLaborCostPerWorkOrder.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN vActualMaterialCostPerWorkOrder
+ON vActualMaterialCostPerWorkOrder.WorkOrderID = WorkOrder.WorkOrderID
+GROUP BY Customer.CustomerID, CustomerName
+ORDER BY Customer.CustomerID
+
+/* SUPPORT CODE */ /*
+
+CREATE VIEW vActualHoursPerTaskType AS
+SELECT TaskID,
+		SUM(ActualHoursWorked) ActualHours
+FROM vActualHoursPerWorkOrderTask
+GROUP BY TaskID
+
+CREATE VIEW vOpenTasks AS 
+SELECT WorkOrderTask.WorkOrderID,
+		WorkOrderTask.TaskID, 
+		WorkOrderTask.TaskStatusID
+FROM WorkOrderTask
+WHERE WorkOrderTask.TaskStatusID IN (1, 2)
+
+CREATE VIEW vOpenWorkOrders AS
+SELECT DISTINCT WorkOrderTask.WorkOrderID
+FROM WorkOrderTask
+LEFT OUTER JOIN vOpenTasks
+ON vOpenTasks.WorkOrderID = WorkOrderTask.WorkOrderID AND vOpenTasks.TaskID = WorkOrderTask.TaskID
+GROUP BY WorkOrderTask.WorkOrderID
+HAVING COUNT(vOpenTasks.TaskStatusID) > 0
+
+CREATE VIEW vClosedWorkOrders AS
+SELECT WorkOrder.WorkOrderID
+FROM WorkOrder
+WHERE WorkOrder.WorkOrderID NOT IN (SELECT WorkOrderID FROM vOpenWorkOrders)
+
+CREATE VIEW vHoursPerTaskType AS
+SELECT	TaskID,
+		SUM(EstimatedHours) EstHours
+FROM WorkOrderTask
+WHERE DateCompleted IS NOT NULL
+GROUP BY TaskID
+
+CREATE VIEW vDateCompletedPerWorkOrder
+SELECT WorkOrderID,
+		MAX(DateCompleted) DateCompleted
+FROM WorkOrderTask
+GROUP BY WorkOrderID
+
+
+CREATE VIEW vDateStartedPerWorkOrder AS
+SELECT WorkOrderID,
+		MIN(DateStarted) DateStarted
+FROM WorkOrderTask
+GROUP BY WorkOrderID
+
+CREATE VIEW vTotalEstCostPerWorkOrder AS
+SELECT	WorkOrderID,
+		SUM(CAST(EstimatedLaborPrice AS FLOAT)) TotalCost
+FROM WorkOrderTask
+GROUP BY WorkOrderID
+
+CREATE VIEW vActualHoursPerWorkOrderTask AS 
+SELECT DailyTimeSheet.WorkOrderID,
+		DailyTimeSheet.TaskID,
+		sum(HoursWorked) ActualLaborHours
+FROM PayRates
+INNER JOIN DailyTimeSheet
+ON DailyTimeSheet.EmployeeID = PayRates.EmployeeID AND DailyTimeSheet.DateOf = PayRates.DateOfPayChange AND DailyTimeSheet.TimeOf = PayRates.TimeOfPayChange
+WHERE DailyTimeSheet.WorkOrderID IS NOT NULL AND DailyTimeSheet.TaskID IS NOT NULL
+GROUP BY DailyTimeSheet.WorkOrderID, DailyTimeSheet.TaskID
+
+CREATE VIEW vActualLaborCostPerWorkOrderTask AS 
+SELECT DailyTimeSheet.WorkOrderID,
+		DailyTimeSheet.TaskID,
+		sum(HoursWorked * PayRate) ActualLaborCost
+FROM PayRates
+INNER JOIN DailyTimeSheet
+ON DailyTimeSheet.EmployeeID = PayRates.EmployeeID AND DailyTimeSheet.DateOf = PayRates.DateOfPayChange AND DailyTimeSheet.TimeOf = PayRates.TimeOfPayChange
+WHERE DailyTimeSheet.WorkOrderID IS NOT NULL AND DailyTimeSheet.TaskID IS NOT NULL
+GROUP BY DailyTimeSheet.WorkOrderID, DailyTimeSheet.TaskID
+
+CREATE VIEW vActualMaterialCostPerWorkOrderTask AS
+(SELECT	WorkOrderID,
+		TaskId,
+		SUM(Quantity * Cost) ActualMaterialCost
+FROM WorkOrderMaterial
+GROUP BY WorkOrderID, TaskID)
+
+CREATE VIEW vActualTotalLaborCostPerWorkOrder AS
+SELECT DailyTimeSheet.WorkOrderID,
+		SUM(HoursWorked * PayRate) ActualLaborCost
+FROM PayRates
+INNER JOIN DailyTimeSheet
+ON DailyTimeSheet.EmployeeID = PayRates.EmployeeID AND DailyTimeSheet.DateOf = PayRates.DateOfPayChange AND DailyTimeSheet.TimeOf = PayRates.TimeOfPayChange
+WHERE DailyTimeSheet.WorkOrderID IS NOT NULL
+GROUP BY DailyTimeSheet.WorkOrderID
+
+
+CREATE VIEW vTotalEstMaterialCostPerWorkOrder AS
+SELECT	WorkOrderID,
+		SUM(CAST(EstimatedMaterialCosts AS FLOAT)) TotalEstMaterialCost
+FROM WorkOrderTask
+GROUP BY WorkOrderID
+
+CREATE VIEW vActualMaterialCostPerWorkOrder AS
+SELECT	WorkOrderID,
+		SUM(Quantity * Cost) ActualMaterialCost
+FROM WorkOrderMaterial
+GROUP BY WorkOrderID
+
+CREATE VIEW vCompletedWorkOrderStats AS
+SELECT	WorkOrder.WorkOrderID,
+		Customer.CustomerName,
+		vDateStartedPerWorkOrder.DateStarted,
+		WorkOrder.DecisionDate,
+		vDateCompletedPerWorkOrder.DateCompleted,
+		vTotalEstCostPerWorkOrder.TotalCost TotalEstimatedLaborCost,
+		vActualTotalLaborCostPerWorkOrder.ActualLaborCost ActualLaborCost,
+		vTotalEstCostPerWorkOrder.TotalCost - vActualTotalLaborCostPerWorkOrder.ActualLaborCost LaborCostVariance,
+		vTotalEstMaterialCostPerWorkOrder.TotalEstMaterialCost TotalEstMaterialCost,
+		vActualMaterialCostPerWorkOrder.ActualMaterialCost,
+		vTotalEstMaterialCostPerWorkOrder.TotalEstMaterialCost - vActualMaterialCostPerWorkOrder.ActualMaterialCost MaterialCostVariance,
+		(vTotalEstMaterialCostPerWorkOrder.TotalEstMaterialCost + vTotalEstCostPerWorkOrder.TotalCost) - (vActualMaterialCostPerWorkOrder.ActualMaterialCost + vActualTotalLaborCostPerWorkOrder.ActualLaborCost) ProfitLoss
+FROM WorkOrder
+INNER JOIN vClosedWorkOrders
+ON vClosedWorkOrders.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN Customer
+ON Customer.CustomerID = WorkOrder.CustomerID
+INNER JOIN vDateStartedPerWorkOrder
+ON vDateStartedPerWorkOrder.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN vDateCompletedPerWorkOrder
+ON vDateCompletedPerWorkOrder.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN vTotalEstCostPerWorkOrder
+ON vTotalEstCostPerWorkOrder.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN vActualTotalLaborCostPerWorkOrder
+ON vActualTotalLaborCostPerWorkOrder.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN vTotalEstMaterialCostPerWorkOrder
+ON vTotalEstMaterialCostPerWorkOrder.WorkOrderID = WorkOrder.WorkOrderID
+INNER JOIN vActualMaterialCostPerWorkOrder
+ON vActualMaterialCostPerWorkOrder.WorkOrderID = workorder.WorkOrderID
+
+CREATE VIEW vTotalActualLaborCostPerWorkOrder AS
+SELECT	WorkOrderID,
+		SUM(ActualLaborCost) TotalActualLaborCost
+FROM vActualLaborCostPerWorkOrderTask
+GROUP BY WorkOrderID
+
+*/

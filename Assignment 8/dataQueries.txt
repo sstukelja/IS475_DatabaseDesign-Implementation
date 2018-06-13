@@ -1,0 +1,375 @@
+/* QUESTION 1 */
+
+SELECT  CONVERT(VARCHAR, OrderDate, 101) 'Order Date',
+		TblOrder.OrderID 'Order Number', 
+		TblCustomer.LastName + ', ' + SUBSTRING(TblCustomer.FirstName, 1, 1) + '.' 'Customer Name',
+		FORMAT(CAST(TblCustomer.Phone AS bigint), '(###) ###-###') 'Phone Number'
+FROM TblOrder
+INNER JOIN TblCustomer
+ON TblCustomer.CustomerID = TblOrder.CustomerID
+WHERE MONTH(TblOrder.OrderDate) = 2 AND YEAR(TblOrder.OrderDate) = YEAR(GETDATE())
+ORDER BY OrderDate DESC 
+
+
+/* QUESTION 2 */
+
+SELECT  CONVERT(VARCHAR, OrderDate, 101) 'Order Date',
+		TblOrder.OrderID 'Order Number', 
+		TblCustomer.LastName + ', ' + SUBSTRING(TblCustomer.FirstName, 1, 1) + '.' 'Customer Name',
+		FORMAT(CAST(TblCustomer.Phone AS bigint), '(###) ###-###') 'Phone Number',
+		TblOrderLine.ItemID,
+		TblOrderLine.Quantity,
+		TblOrderLine.Price,
+		TblOrderLine.Quantity * TblOrderLine.Price 'Extended Price'
+FROM TblOrder
+INNER JOIN TblCustomer
+ON TblCustomer.CustomerID = TblOrder.CustomerID
+INNER JOIN TblOrderLine
+ON TblOrder.OrderID = TblOrderLine.OrderID
+WHERE MONTH(TblOrder.OrderDate) = 2 AND YEAR(TblOrder.OrderDate) = YEAR(GETDATE())
+ORDER BY OrderDate DESC 
+
+
+/* QUESTION 3 */
+
+SELECT  CONVERT(VARCHAR, OrderDate, 101) 'Order Date',
+		TblOrder.OrderID 'Order Number', 
+		TblCustomer.LastName + ', ' + SUBSTRING(TblCustomer.FirstName, 1, 1) + '.' 'Customer Name',
+		FORMAT(CAST(TblCustomer.Phone AS bigint), '(###) ###-###') 'Phone Number',
+		TblOrderline.ItemID,
+		TblItem.Description,
+		TblOrderLine.Quantity,
+		TblOrderLine.Price,
+		TblOrderLine.Quantity * TblOrderLine.Price 'Extended Price'
+FROM TblOrder
+INNER JOIN TblCustomer
+ON TblCustomer.CustomerID = TblOrder.CustomerID
+INNER JOIN TblOrderLine
+ON TblOrder.OrderID = TblOrderLine.OrderID
+INNER JOIN TblItem
+ON TblOrderLine.ItemID = TblItem.ItemID
+WHERE MONTH(TblOrder.OrderDate) = 2 AND YEAR(TblOrder.OrderDate) = YEAR(GETDATE())
+ORDER BY TblOrder.OrderDate DESC 
+
+
+/* QUESTION 4 */ 
+
+SELECT  CONVERT(VARCHAR, OrderDate, 101) 'Order Date',
+		TblOrder.OrderID 'Order Number', 
+		TblCustomer.LastName + ', ' + SUBSTRING(TblCustomer.FirstName, 1, 1) + '.' 'Customer Name',
+		FORMAT(CAST(TblCustomer.Phone AS bigint), '(###) ###-###') 'Phone Number',
+		TblOrderline.ItemID,
+		TblItem.Description,
+		TblItemType.CategoryDescription,
+		TblOrderLine.Quantity,
+		TblOrderLine.Price,
+		TblOrderLine.Quantity * TblOrderLine.Price 'Extended Price'
+FROM TblOrder
+INNER JOIN TblCustomer
+ON TblCustomer.CustomerID = TblOrder.CustomerID
+INNER JOIN TblOrderLine
+ON TblOrder.OrderID = TblOrderLine.OrderID
+INNER JOIN TblItem
+ON TblOrderLine.ItemID = TblItem.ItemID
+INNER JOIN TblItemType
+ON TblItemType.TypeID = TblItem.TypeID
+WHERE MONTH(TblOrder.OrderDate) = 2 AND YEAR(TblOrder.OrderDate) = YEAR(GETDATE())
+ORDER BY TblOrder.OrderDate DESC 
+
+
+/* QUESTION 5 */
+
+SELECT  CONVERT(VARCHAR, TblOrder.OrderDate, 101) 'Order Date',
+		TblOrder.OrderID 'Order Number', 
+		TblCustomer.LastName + ', ' + SUBSTRING(TblCustomer.FirstName, 1, 1) + '.' 'Customer Name',
+		FORMAT(CAST(TblCustomer.Phone AS bigint), '(###) ###-###') 'Phone Number',
+		TblOrderline.ItemID,
+		TblItem.Description,
+		TblItemType.CategoryDescription,
+		CASE
+			WHEN TblOrderLine.AddressID IS NOT NULL OR TblOrder.AddressID IS NOT NULL
+				THEN TblShipAddress.ShipAddress
+			ELSE TblCustomer.Address
+			END 'Shipping Address',
+		CASE
+			WHEN TblOrderLine.AddressID IS NOT NULL OR TblOrder.AddressID IS NOT NULL
+				THEN TblShipAddress.ShipPostalCode
+			ELSE TblCustomer.Zip
+			END 'Ship Code',
+		CASE
+			WHEN TblOrderLine.AddressID IS NOT NULL OR TblOrder.AddressID IS NOT NULL
+				THEN TblShipAddress.ShipCountry
+			ELSE TblCustomer.Country
+			END 'Ship Country',
+		TblOrderLine.Quantity,
+		TblOrderLine.Price,
+		TblOrderLine.Quantity * TblOrderLine.Price 'Extended Price'
+FROM TblOrder
+INNER JOIN TblCustomer
+ON TblCustomer.CustomerID = TblOrder.CustomerID
+INNER JOIN TblOrderLine
+ON TblOrder.OrderID = TblOrderLine.OrderID
+INNER JOIN TblItem
+ON TblOrderLine.ItemID = TblItem.ItemID
+INNER JOIN TblItemType
+ON TblItemType.TypeID = TblItem.TypeID
+LEFT OUTER JOIN TblShipAddress
+ON TblShipAddress.AddressID = TblOrderLine.AddressID OR TblShipAddress.AddressID = TblOrder.AddressID OR TblShipAddress.ShipAddress = TblCustomer.Address
+WHERE MONTH(TblOrder.OrderDate) = 2 AND YEAR(TblOrder.OrderDate) = YEAR(GETDATE())
+
+
+/* QUESTION 6 */
+
+SELECT  TblItem.ItemID,
+		TblItem.Description,
+		SUM(TblOrderLine.Quantity) 'Total Quantity Sold',
+		COUNT(TblOrderLine.ItemID) 'Count of OrderLines',
+		TblItem.ListPrice,
+		MIN(TblOrderLine.Price) 'Minimum Price',
+		MAX(TblOrderLine.Price) 'Maximum Price',
+		ROUND(AVG(TblOrderLine.Price), 2) 'Average Price'
+FROM TblItem
+INNER JOIN TblOrderLine
+ON TblItem.ItemID = TblOrderLine.ItemID
+GROUP BY TblItem.ItemID, TblItem.Description, TblItem.ListPrice
+ORDER BY TblItem.ItemID
+
+
+/* QUESTION 7 */
+
+SELECT  TblItem.ItemID,
+		TblItem.Description,
+		SUM(ISNULL(TblOrderLine.Quantity, 0)) 'Total Quantity Sold',
+		COUNT(TblOrderLine.ItemID) 'Count of OrderLines',
+		TblItem.ListPrice,
+		MIN(ISNULL(TblOrderLine.Price, 0)) 'Minimum Price',
+		MAX(ISNULL(TblOrderLine.Price, 0)) 'Maximum Price',
+		ROUND(AVG(ISNULL(TblOrderLine.Price, 0)), 2) 'Average Price'
+FROM TblItem
+LEFT OUTER JOIN TblOrderLine
+ON TblItem.ItemID = TblOrderLine.ItemID
+GROUP BY TblItem.ItemID, TblItem.Description, TblItem.ListPrice
+ORDER BY TblItem.ItemID
+
+
+/* QUESTION 8 */
+
+SELECT  TblItem.ItemID,
+		TblItem.Description,
+		ISNULL(CONVERT(varchar, TblItemCostHistory.LastCostDate, 107), 'No Date Recorded') 'Last Cost Date',
+		ISNULL(TblItemCostHistory.LastCost, 0) 'Last Cost Paid'
+FROM TblItem
+FULL OUTER JOIN TblItemCostHistory
+ON TblItem.ItemID = TblItemCostHistory.ItemID
+Order BY TblItem.ItemID, TblItemCostHistory.LastCostDate DESC
+
+
+/* QUESTION 9 */
+
+SELECT  TblItem.ItemID,
+		TblItem.Description,
+		ISNULL(CONVERT(varchar, TblItemCostHistory.LastCostDate, 107), 'No Date Recorded') 'Last Cost Date',
+		ISNULL(TblItemCostHistory.LastCost, 0) 'Last Cost Paid'
+FROM TblItem
+FULL OUTER JOIN TblItemCostHistory
+ON TblItem.ItemID = TblItemCostHistory.ItemID
+WHERE TblItemCostHistory.LastCostDate IN (SELECT MAX(LastCostDate)
+										 FROM TblItemCostHistory		 					 
+										 WHERE TblItem.ItemID = TblItemCostHistory.ItemID
+										 GROUP BY ItemID) OR TblItemCostHistory.LastCostDate IS NULL
+Order BY TblItem.ItemID
+
+
+
+/* QUESTION 10 */
+
+SELECT  TblItem.ItemID,
+		TblItem.Description,
+		ISNULL(CONVERT(varchar, TblItemCostHistory.LastCostDate, 107), 'No Date Recorded') 'Last Cost Date',
+		ISNULL((SELECT COUNT(ItemID)
+				FROM TblItemCostHistory
+				WHERE ItemID = TblItem.ItemID
+				GROUP BY ItemID), 0) 'Count of Purchases',
+		ISNULL(TblItemCostHistory.LastCost, 0) 'Last Cost Paid',
+		ISNULL((SELECT AVG(LastCost)
+		FROM TblItemCostHistory
+		WHERE ItemID = TblItem.ItemID
+		GROUP BY ItemID), 0) 'Average Last Cost'
+		 
+FROM TblItem
+FULL OUTER JOIN TblItemCostHistory
+ON TblItem.ItemID = TblItemCostHistory.ItemID
+WHERE TblItemCostHistory.LastCostDate IN (SELECT MAX(LastCostDate)
+										 FROM TblItemCostHistory		 					 
+										 WHERE TblItem.ItemID = TblItemCostHistory.ItemID
+										 GROUP BY ItemID) OR TblItemCostHistory.LastCostDate IS NULL
+Order BY TblItem.ItemID
+
+
+/* QUESTION 11 */
+
+SELECT  TblOrderLine.OrderID,
+		TblOrderLine.ItemID,
+		TblOrderLine.Price,
+		TblOrderLine.Quantity,
+		ISNULL(SUM(TblShipLine.QtyShipped), 0) 'Total Quantity Shipped',
+		TblOrderLine.Quantity - ISNULL(SUM(TblShipLine.QtyShipped), 0) 'Left to Ship'
+FROM TblOrderLine
+LEFT OUTER JOIN TblShipLine
+ON TblShipLine.OrderID = TblOrderLine.OrderID AND TblShipLine.ItemID = TblOrderLine.ItemID
+GROUP BY TblOrderLine.OrderID, TblOrderLine.ItemID, TblOrderLine.Price, TblOrderLine.Quantity
+ORDER BY TblOrderLine.OrderID
+
+
+/* QUESTION 12 */
+
+SELECT  TblOrderLine.OrderID,
+		TblCustomer.LastName + ', ' + TblCustomer.FirstName 'Customer Name',
+		CASE
+			WHEN TblOrderLine.AddressID IS NOT NULL OR TblOrder.AddressID IS NOT NULL
+				THEN TblShipAddress.ShipName
+			ELSE TblCustomer.LastName + ', ' + TblCustomer.FirstName
+		END 'Shipping Address',
+		TblOrderLine.ItemID,
+		TblOrderLine.Price,
+		TblOrderLine.Quantity,
+		ISNULL(SUM(TblShipLine.QtyShipped), 0) 'Total Quantity Shipped',
+		TblOrderLine.Quantity - ISNULL(SUM(TblShipLine.QtyShipped), 0) 'Left to Ship'
+FROM TblOrderLine
+LEFT OUTER JOIN TblShipLine
+ON TblShipLine.OrderID = TblOrderLine.OrderID AND TblShipLine.ItemID = TblOrderLine.ItemID
+INNER JOIN TblOrder
+ON TblOrder.OrderID = TblOrderLine.OrderID
+LEFT JOIN TblCustomer
+ON TblCustomer.CustomerID = TblOrder.CustomerID
+LEFT OUTER JOIN TblShipAddress
+ON TblShipAddress.AddressID = TblOrder.AddressID OR TblShipAddress.AddressID = TblOrderLine.AddressID OR TblShipAddress.ShipAddress = TblCustomer.Address
+GROUP BY TblOrderLine.OrderID, TblOrderLine.ItemID, TblOrderLine.Price, TblOrderLine.Quantity, TblShipAddress.ShipName, TblCustomer.LastName, TblCustomer.FirstName, TblOrderLine.AddressID, TblOrder.AddressID
+ORDER BY TblOrderLine.OrderID
+
+
+/* QUESTION 13 */ 
+
+SELECT  TblOrderLine.OrderID,
+		TblCustomer.LastName + ', ' + TblCustomer.FirstName 'Customer Name',
+		CASE
+			WHEN TblOrderLine.AddressID IS NOT NULL OR TblOrder.AddressID IS NOT NULL
+				THEN TblShipAddress.ShipName
+			ELSE TblCustomer.LastName + ', ' + TblCustomer.FirstName
+		END 'Shipping Address',
+		TblOrderLine.ItemID,
+		TblItem.Description,
+		TblItemType.CategoryDescription,
+		TblOrderLine.Price,
+		TblItem.ListPrice,
+		TblOrderLine.Quantity,
+		ISNULL(SUM(TblShipLine.QtyShipped), 0) 'Total Quantity Shipped',
+		TblOrderLine.Quantity - ISNULL(SUM(TblShipLine.QtyShipped), 0) 'Left to Ship'
+FROM TblOrderLine
+LEFT OUTER JOIN TblShipLine
+ON TblShipLine.OrderID = TblOrderLine.OrderID AND TblShipLine.ItemID = TblOrderLine.ItemID
+INNER JOIN TblOrder
+ON TblOrder.OrderID = TblOrderLine.OrderID
+LEFT JOIN TblCustomer
+ON TblCustomer.CustomerID = TblOrder.CustomerID
+LEFT OUTER JOIN TblShipAddress
+ON TblShipAddress.AddressID = TblOrder.AddressID OR TblShipAddress.AddressID = TblOrderLine.AddressID OR TblShipAddress.ShipAddress = TblCustomer.Address
+INNER JOIN TblItem
+ON TblItem.ItemID = TblOrderLine.ItemID
+INNER JOIN TblItemType
+ON TblItemType.TypeID = TblItem.TypeID
+GROUP BY TblOrderLine.OrderID,
+		 TblOrderLine.ItemID,
+		 TblOrderLine.Price,
+		 TblOrderLine.Quantity,
+		 TblShipAddress.ShipName,
+		 TblCustomer.LastName,
+		 TblCustomer.FirstName,
+		 TblOrderLine.AddressID,
+		 TblOrder.AddressID,
+		 TblItem.Description,
+		 TblItemType.CategoryDescription,
+		 TblItem.ListPrice
+ORDER BY TblOrderLine.OrderID
+
+/* QUESTION 14 */
+
+SELECT  TblOrderLine.OrderID,
+		TblCustomer.LastName + ', ' + TblCustomer.FirstName 'Customer Name',
+		CASE
+			WHEN TblOrderLine.AddressID IS NOT NULL OR TblOrder.AddressID IS NOT NULL
+				THEN TblShipAddress.ShipName
+			ELSE TblCustomer.LastName + ', ' + TblCustomer.FirstName
+		END 'Shipping Address',
+		TblOrderLine.ItemID,
+		TblItem.Description,
+		TblItemType.CategoryDescription,
+		TblOrderLine.Price,
+		TblItem.ListPrice,
+		TblOrderLine.Quantity,
+		ISNULL(SUM(TblShipLine.QtyShipped), 0) 'Total Quantity Shipped',
+		TblOrderLine.Quantity - ISNULL(SUM(TblShipLine.QtyShipped), 0) 'Left to Ship'
+FROM TblOrderLine
+LEFT OUTER JOIN TblShipLine
+ON TblShipLine.OrderID = TblOrderLine.OrderID AND TblShipLine.ItemID = TblOrderLine.ItemID
+INNER JOIN TblOrder
+ON TblOrder.OrderID = TblOrderLine.OrderID
+LEFT JOIN TblCustomer
+ON TblCustomer.CustomerID = TblOrder.CustomerID
+LEFT OUTER JOIN TblShipAddress
+ON TblShipAddress.AddressID = TblOrder.AddressID OR TblShipAddress.AddressID = TblOrderLine.AddressID OR TblShipAddress.ShipAddress = TblCustomer.Address
+INNER JOIN TblItem
+ON TblItem.ItemID = TblOrderLine.ItemID
+INNER JOIN TblItemType
+ON TblItemType.TypeID = TblItem.TypeID
+GROUP BY TblOrderLine.OrderID,
+		 TblOrderLine.ItemID,
+		 TblOrderLine.Price,
+		 TblOrderLine.Quantity,
+		 TblShipAddress.ShipName,
+		 TblCustomer.LastName,
+		 TblCustomer.FirstName,
+		 TblOrderLine.AddressID,
+		 TblOrder.AddressID,
+		 TblItem.Description,
+		 TblItemType.CategoryDescription,
+		 TblItem.ListPrice
+HAVING TblOrderLine.Quantity - ISNULL(SUM(TblShipLine.QtyShipped), 0)  < 0
+ORDER BY TblOrderLine.OrderID
+
+/* QUESTION 15 */
+
+SELECT  TblCustomer.LastName + ', ' + TblCustomer.FirstName 'Customer Name',
+		TblOrder.OrderID,
+		TblOrderLine.ItemID,
+		TblItem.Description
+FROM TblCustomer
+INNER JOIN TblOrder
+ON TblOrder.CustomerID = TblCustomer.CustomerID
+INNER JOIN TblOrderLine
+ON TblOrderLine.OrderID = TblOrder.OrderID
+INNER JOIN TblItem
+ON TblItem.ItemID = TblOrderLine.ItemID
+INNER JOIN TblShipLine
+ON TblShipLine.OrderID = TblOrderLine.OrderID AND TblShipLine.ItemID = TblOrderLine.ItemID
+WHERE TblShipLine.MethodShipped = 'FEDEX'
+ORDER BY TblCustomer.LastName
+
+/* QUESTION 16 */ 
+
+SELECT  TblCustomer.CustomerID,
+		TblCustomer.LastName,
+		TblCustomer.FirstName,
+		TblCustomer.FirstBuyDate,
+		TblReview.ReviewDate,
+		TblReview.ItemID,
+		TblItem.Description
+FROM TblCustomer
+INNER JOIN TblOrder
+ON TblOrder.CustomerID = TblCustomer.CustomerID
+INNER JOIN TblOrderLine 
+ON TblOrderLine.OrderID = TblOrder.OrderID
+INNER JOIN TblReview
+ON TblReview.OrderID = TblOrderLine.OrderID AND TblReview.ItemID = TblOrderLine.ItemID
+INNER JOIN TblItem
+ON TblItem.ItemID = TblReview.ItemID

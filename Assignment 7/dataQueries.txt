@@ -1,0 +1,180 @@
+/* QUESTION 16 */
+SELECT  CustomerID,
+		LastName + ', ' + SUBSTRING(FirstName, 1, 1) + '.' 'Customer Name',
+		FORMAT(CAST(Phone AS bigint), '(###) ###-###') 'Phone Number',
+		UPPER(City) 'City',
+		UPPER(State) 'State',
+		CONVERT(varchar, FirstBuyDate, 107) 'First Purchase Date'
+FROM TblCustomer
+WHERE FirstBuyDate = (SELECT MAX(FirstBuyDate)
+					  FROM TblCustomer); 
+
+
+/* QUESTION 15 */
+SELECT  CustomerID,
+		LastName + ', ' + SUBSTRING(FirstName, 1, 1) + '.' 'Customer Name',
+		FORMAT(CAST(Phone AS bigint), '(###) ###-###') 'Phone Number',
+		UPPER(City) 'City',
+		UPPER(State) 'State'
+FROM TblCustomer
+WHERE CustomerID NOT IN (SELECT CustomerID
+						 FROM TblOrder);
+
+
+/* QUESTION 14 */
+SELECT  OrderID,
+		ItemID,
+		COUNT(OrderID) 'Number of Shipments',
+		SUM(QtyShipped) 'Total Shipped' 
+FROM TblShipLine
+GROUP BY OrderID, ItemID
+HAVING COUNT(OrderId) > 1
+ORDER BY OrderId;
+
+
+/* QUESTION 13 */
+SELECT  OrderID 'Order Number',
+		CustomerID 'Customer Number',
+		CONVERT(varchar, OrderDate, 107) 'Date Ordered',
+		CONVERT(varchar, (DATEADD(DAY, 50, OrderDate)), 107) '50 Days After Date Ordered',
+		DATEDIFF(DAY, OrderDate, GETDATE()) ' Number of Days Difference',
+		GETDATE() 'Current Date and Time'
+FROM TblOrder
+WHERE DATEDIFF(DAY, OrderDate, GETDATE()) > 50;
+
+
+/* QUESTION 12 */ 
+SELECT DISTINCT ItemID,
+		Count(ItemID) 'Number of Rows',
+		SUM(Quantity) 'Quantity Sold',
+		MIN(Price) 'Minimum Price',
+		MAX(Price) 'Maximum Price',
+		AVG(Price) 'Average Price',
+		CAST(((MAX(Price) - MIN(Price)) / MIN(Price)) * 100 AS varchar) + '%' 'Diff'
+FROM TblOrderLine
+GROUP BY ItemID 
+HAVING MAX(Price) > 1.5 * MIN(Price)
+ORDER BY ItemID;
+
+
+/* QUESTION 11 */
+SELECT DISTINCT ItemID,
+		Count(ItemID) 'Number of Rows',
+		SUM(Quantity) 'Quantity Sold',
+		MIN(Price) 'Minimum Price',
+		MAX(Price) 'Maximum Price',
+		AVG(Price) 'Average Price' 
+FROM TblOrderLine
+GROUP BY ItemID 
+ORDER BY ItemID
+
+
+/* QUESTION 10 */
+SELECT ROUND(AVG(CAST(QtyShipped AS decimal)), 2)
+FROM TblShipLine
+WHERE MethodShipped = 'fedex';
+
+
+/* QUESTION 9 */ 
+SELECT CONVERT(varchar, MIN(FirstBuyDate), 107) 'Earliest First Buy Date'
+FROM TblCustomer;
+
+
+/* QUESTION 8 */
+SELECT  OrderID,
+		ItemId,
+		CONVERT(varchar, DateShipped, 101) 'Date Shipped',
+		QtyShipped,
+		UPPER(MethodShipped) 'Method Shipped'
+FROM TblShipLine
+WHERE MONTH(DateShipped) = 1 AND YEAR(DateShipped) = YEAR(GETDATE())
+ORDER BY OrderID, ItemID;
+
+
+/* QUESTION 7 */
+SELECT  OrderID 'Order Number',
+		ItemID 'Item Number',
+		Quantity 'Quantity Ordered',
+		Price 'Price Paid',
+		Price * Quantity 'Extended Price', 
+			CASE 
+				WHEN Price * Quantity < 1000
+					THEN NULL
+				WHEN Price * Quantity >= 1000 AND Price * Quantity < 1500
+					THEN 'Medium Order'
+				WHEN Price * Quantity >= 1500 AND Price * Quantity < 2000
+					THEN  'Large Order - Monitor Shipping Date'
+				WHEN Price * Quantity >= 2000 AND Price * Quantity < 5000
+					THEN 'Very Large Order - Watch Dates'
+				WHEN Price * Quantity >= 5000
+					THEN '***Closely Watch the Status***'
+				END 'Order Status Message'
+FROM TblOrderLine
+WHERE Price * Quantity > 850
+ORDER BY ItemID, OrderID;
+
+
+/* QUESTION 6 */
+SELECT  OrderID 'Order Number',
+		ItemID 'Item Number',
+		Quantity 'Quantity Ordered',
+		Price 'Price Paid',
+		Price * Quantity 'Extended Price' 
+FROM TblOrderLine
+WHERE Price * Quantity > 850
+ORDER BY ItemID, OrderID;
+
+
+/* QUESTION 5 */
+SELECT  OrderID 'Order Number',
+		ItemID 'Item Number',
+		Quantity 'Quantity',
+		Price 'Price Paid',
+		Price * Quantity 'Extended Price'
+FROM TblOrderLine
+WHERE ItemID = 'A34882'
+ORDER BY OrderID;
+
+
+/* QUESTION 4 */
+SELECT  CONVERT(varchar, OrderDate, 101) 'Date of Order',
+		OrderID 'Order Number', 
+		CustomerID 'Customer Number', 
+		CreditCode 'Credit Code',
+		'Use Billing Address' 'Shipping AddressID'
+FROM TblOrder
+WHERE AddressID IS NULL
+ORDER BY OrderDate;
+
+
+/* QUESTION 3 */
+SELECT  CONVERT(varchar, OrderDate, 101) 'Date of Order',
+		OrderID 'Order Number', 
+		CustomerID 'Customer Number', 
+		CreditCode 'Credit Code',
+		AddressID 'Shipping AddressID'
+FROM TblOrder
+WHERE AddressID IS NULL
+ORDER BY OrderDate;
+
+
+/* QUESTION 2 */ 
+SELECT  LastName + ', ' + SUBSTRING(FirstName, 1, 1) + '.' 'Customer Name',
+		FORMAT(CAST(Phone AS bigint), '(###) ###-###') 'Phone Number',
+		UPPER(City),
+		UPPER(State) 'State',
+		CONVERT(varchar, FirstBuyDate, 107) 'First Buy Date'
+FROM TblCustomer
+WHERE State = 'nv'
+ORDER BY LastName;
+
+
+/* QUESTION 1 */ 
+SELECT  FirstName + ' ' + LastName 'Customer Name',
+		Phone,
+		City,
+		State,
+		FirstBuyDate
+FROM TblCustomer
+WHERE State = 'nv'
+ORDER BY LastName;

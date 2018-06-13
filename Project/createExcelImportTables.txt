@@ -1,0 +1,53 @@
+IF OBJECT_ID('dbo.AllWorkOrderTasks') IS NOT NULL 
+DROP TABLE dbo.AllWorkOrderTasks; 
+
+IF OBJECT_ID('dbo.AllActualLaborTimeSheets') IS NOT NULL 
+DROP TABLE dbo.AllActualLaborTimeSheets; 
+
+IF OBJECT_ID('dbo.AllActualMaterialCosts') IS NOT NULL 
+DROP TABLE dbo.AllActualMaterialCosts; 
+
+CREATE TABLE AllWorkOrderTasks(WorkOrderID VARCHAR(10), 
+							   DateProposed DATE, 
+							   DateAccepted DATE,
+							   WorkOrderAddress VARCHAR(255),
+							   WorkOrderCity VARCHAR(255),
+							   WorkOrderState CHAR(2), 
+							   WorkOrderZip CHAR(5),
+							   PrimaryWorkOrderID VARCHAR(10),
+							   EmpManagerID VARCHAR(10),
+							   CustomerID VARCHAR(10),
+							   CustomerName VARCHAR(255),
+							   CustomerAddress VARCHAR(255),
+							   CustomerCity VARCHAR(255),
+							   CustomerState CHAR(2),
+							   CustomerZip CHAR(5),
+							   CustomerPhone CHAR(10),
+							   CustomerEmail VARCHAR(255),
+							   TaskID VARCHAR(10),
+							   TaskDescription VARCHAR(255),
+							   DateStarted DATE,
+							   DateCompleted DATE,
+							   SquareFeet VARCHAR(10), 
+							   EstHours INT,
+							   EstLaborCost INT,
+							   EstMaterialCost INT);
+
+CREATE TABLE AllActualLaborTimeSheets(EmpID VARCHAR(10),
+									  LastName VARCHAR(255),
+									  FirstName VARCHAR(255),
+									  StartDate DATETIME, 
+									  HoursWorked FLOAT,
+									  TaskID VARCHAR(10), 
+									  WorkOrderID VARCHAR(10),
+									  HourlyPayRate FLOAT);
+
+CREATE TABLE AllActualMaterialCosts(MaterialAssignedID VARCHAR(10), 
+									DateAssigned DATE,
+									MaterialID VARCHAR(10), 
+									MaterialName VARCHAR(255),
+									TaskID VARCHAR(10), 
+									WorkOrderID VARCHAR(10), 
+									Quantity FLOAT,
+									UOM VARCHAR(10), 
+									CostPerUOM FLOAT);

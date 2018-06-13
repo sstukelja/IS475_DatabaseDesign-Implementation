@@ -1,0 +1,168 @@
+IF OBJECT_ID('dbo.Location') IS NOT NULL 
+DROP TABLE dbo.Location; 
+
+IF OBJECT_ID('dbo.WorkOrderMaterial') IS NOT NULL 
+DROP TABLE dbo.WorkOrderMaterial; 
+
+IF OBJECT_ID('dbo.Material') IS NOT NULL 
+DROP TABLE dbo.Material; 
+
+IF OBJECT_ID('dbo.DailyTimeSheet') IS NOT NULL 
+DROP TABLE dbo.DailyTimeSheet; 
+
+IF OBJECT_ID('dbo.PayRates') IS NOT NULL 
+DROP TABLE dbo.PayRates; 
+
+IF OBJECT_ID('dbo.WorkOrderTask') IS NOT NULL 
+DROP TABLE dbo.WorkOrderTask; 
+
+IF OBJECT_ID('dbo.TaskType') IS NOT NULL 
+DROP TABLE dbo.TaskType; 
+
+IF OBJECT_ID('dbo.WorkOrder') IS NOT NULL 
+DROP TABLE dbo.WorkOrder; 
+
+IF OBJECT_ID('dbo.StatusType') IS NOT NULL 
+DROP TABLE dbo.StatusType; 
+
+IF OBJECT_ID('dbo.TaskStatusType') IS NOT NULL 
+DROP TABLE dbo.TaskStatusType; 
+
+IF OBJECT_ID('dbo.WorkOrderStatusType') IS NOT NULL 
+DROP TABLE dbo.WorkOrderStatusType; 
+
+IF OBJECT_ID('dbo.Customer') IS NOT NULL 
+DROP TABLE dbo.Customer; 
+
+IF OBJECT_ID('dbo.CustomerType') IS NOT NULL 
+DROP TABLE dbo.CustomerType; 
+
+IF OBJECT_ID('dbo.Zipcode') IS NOT NULL 
+DROP TABLE dbo.Zipcode; 
+
+IF OBJECT_ID('dbo.Employee') IS NOT NULL 
+DROP TABLE dbo.Employee; 
+
+IF OBJECT_ID('dbo.JobTitle') IS NOT NULL 
+DROP TABLE dbo.JobTitle; 
+
+
+
+CREATE TABLE Zipcode(Zipcode CHAR(5),
+					 City VARCHAR(255),
+					 State CHAR(2),
+					 PRIMARY KEY (Zipcode));
+
+CREATE TABLE Location(LocationID INT IDENTITY(1, 1),
+					  Zipcode CHAR(5),
+					  StreetAddress VARCHAR(255),
+					  PRIMARY KEY (LocationID),
+					  FOREIGN KEY (Zipcode) REFERENCES Zipcode(Zipcode)); 
+
+CREATE TABLE CustomerType(CustomerTypeID INT IDENTITY(1, 1),
+						  TypeDescription VARCHAR(255),
+						  PRIMARY KEY (CustomerTypeID));
+
+CREATE TABLE Customer(CustomerID VARCHAR(10),
+					  CustomerTypeID INT,
+					  Zipcode CHAR(5),
+					  CustomerName VARCHAR(255),
+					  Email VARCHAR(255),
+					  BillingAddress VARCHAR(255), 
+					  PRIMARY KEY (CustomerID),
+					  FOREIGN KEY (Zipcode) REFERENCES Zipcode(Zipcode),
+					  FOREIGN KEY (CustomerTypeID) REFERENCES CustomerType(CustomerTypeID)); 
+
+CREATE TABLE WorkOrderStatusType(WorkOrderStatusTypeID INT IDENTITY(1, 1), 
+								 StatusDescription VARCHAR(255), 
+								 PRIMARY KEY (WorkOrderStatusTypeID));
+
+CREATE TABLE StatusType(StatusTypeID INT IDENTITY(1, 1), 
+								 StatusDescription VARCHAR(255), 
+								 PRIMARY KEY (StatusTypeID)); 
+
+CREATE TABLE JobTitle(JobTitleID INT IDENTITY(1, 1),
+					  JobTitle VARCHAR(255),
+					  PRIMARY KEY (JobTitleID));
+
+CREATE TABLE Employee(EmployeeID VARCHAR(10), 
+					  ManagerID VARCHAR(10),
+					  JobTitleID INT,
+					  FirstName VARCHAR(255), 
+					  LastName VARCHAR(255),
+					  PRIMARY KEY (EmployeeID),
+					  FOREIGN KEY (ManagerID) REFERENCES Employee(EmployeeID),
+					  FOREIGN KEY (JobTitleID) REFERENCES JobTitle(JobTitleID));
+
+CREATE TABLE WorkOrder(WorkOrderID VARCHAR(10), 
+					   CustomerID VARCHAR(10) NULL,
+					   ManagerID VARCHAR(10) NULL,
+					   WorkOrderStatusTypeID INT,
+					   StatusID INT,
+					   EmployeeID VARCHAR(10), 
+					   PrimaryWorkOrderID VARCHAR(10),
+					   Notes VARCHAR(255),
+					   DecisionDate DATETIME, 
+					   DateWritten DATETIME,
+					   DateStarted DATETIME,
+					   DateRequired DATETIME,
+					   DateCompleted DATETIME, 					    
+					   PRIMARY KEY (WorkOrderID),
+					   FOREIGN KEY (CustomerID) REFERENCES Customer(CustomerID),
+					   FOREIGN KEY (ManagerID) REFERENCES Employee(EmployeeID),
+					   FOREIGN KEY (WorkOrderStatusTypeID) REFERENCES WorkOrderStatusType(WorkOrderStatusTypeID),
+					   FOREIGN KEY (StatusID) REFERENCES StatusType(StatusTypeID),
+					   FOREIGN KEY (EmployeeID) REFERENCES Employee(EmployeeID),
+					   FOREIGN KEY (PrimaryWorkOrderID) REFERENCES WorkOrdeR(WorkOrderID));
+
+CREATE TABLE TaskType(TaskTypeID INT IDENTITY(1, 1), 
+					  TypeDescription VARCHAR(255),
+					  PRIMARY KEY (TaskTypeID));
+
+CREATE TABLE TaskStatusType(TaskStatusTypeID INT IDENTITY(1, 1), 
+					  StatusDescription VARCHAR(255),
+					  PRIMARY KEY (TaskStatusTypeID));
+
+CREATE TABLE WorkOrderTask(TaskID VARCHAR(10), 
+						   WorkOrderID VARCHAR(10), 
+						   TaskTypeID INT, 
+						   TaskStatusID INT, 
+						   SquareFeet VARCHAR(10), 
+						   EstimatedHours INT,
+						   EstimatedMaterialCosts VARCHAR(10), 
+						   EstimatedLaborPrice VARCHAR(10),
+						   DateStarted DATETIME,
+						   DateCompleted DATETIME,
+						   PRIMARY KEY (TaskID),
+						   FOREIGN KEY (WorkOrderID) REFERENCES WorkOrder(WorkOrderID),
+						   FOREIGN KEY (TaskTypeID) REFERENCES TaskType(TaskTypeID),
+						   FOREIGN KEY (TaskStatusID) REFERENCES TaskStatusType(TaskStatusTypeID));
+
+CREATE TABLE PayRates(EmployeeID VARCHAR(10), 
+					  DateOfPayChange DATETIME,
+					  PayRate INT, 
+					  PRIMARY KEY (EmployeeID, DateOFPayChange),
+					  FOREIGN KEY (EmployeeID) REFERENCES Employee(EmployeeID));
+
+CREATE TABLE Material(MaterialID VARCHAR(10),
+					  MaterialName VARCHAR(255),
+					  UnitOfMeasure VARCHAR(10),
+					  PRIMARY KEY (MaterialID));
+
+CREATE TABLE WorkOrderMaterial(MaterialID VARCHAR(10), 
+							   TaskID VARCHAR(10), 
+							   DateOf DATETIME, 
+							   Quantity INT,
+							   Cost INT, 
+							   PRIMARY KEY (MaterialID, TaskID, DateOf),
+							   FOREIGN KEY (TaskID) REFERENCES WorkOrderTask(TaskID),
+							   FOREIGN KEY (MaterialID) REFERENCES Material(MaterialID));
+
+CREATE TABLE DailyTimeSheet(EmployeeID VARCHAR(10),
+							DateOf DATE, 
+							TimeOf TIME,
+							TaskID VARCHAR(10),
+							PRIMARY KEY (EmployeeID, DateOf, TimeOf),
+							FOREIGN KEY (TaskID) REFERENCES WorkOrderTask(TaskID));		
+
+		

@@ -1,0 +1,81 @@
+CREATE TABLE TblCustomer
+(CustomerID CHAR(5) PRIMARY KEY,
+LastName VARCHAR(30) NOT NULL,
+FirstName VARCHAR(20),
+Address VARCHAR(30) NOT NULL,
+City VARCHAR(20) NOT NULL,
+State CHAR(2) NOT NULL,
+Zip VARCHAR(12) NOT NULL,
+Country VARCHAR(15),
+FirstBuyDate DATETIME,
+Email VARCHAR(60),
+Phone CHAR(15) NOT NULL,
+CustomerType CHAR(1) NOT NULL CHECK (CustomerType IN ('P', 'S')),
+CustomerAffID CHAR(5) REFERENCES TblCustomer(CustomerID));
+
+
+CREATE TABLE TblShipAddress
+(AddressID INT PRIMARY KEY,
+ShipName VARCHAR(30),
+ShipAddress VARCHAR(30),
+ShipPostalCode VARCHAR(12),
+ShipCountry VARCHAR(30),
+ShipPhone CHAR(15));
+
+CREATE TABLE TblOrder
+(OrderID CHAR(6) PRIMARY KEY,
+OrderDate DATETIME NOT NULL,
+DiscountCode CHAR(2) CHECK (DiscountCode IN ('02', '03', '04', '06', '08', '10', 'A1', 'B3')),
+CreditCode CHAR(3) NOT NULL,
+CustomerID CHAR(5) NOT NULL REFERENCES TblCustomer(CustomerID),
+AddressID INT REFERENCES TblShipAddress(AddressID));
+
+CREATE TABLE TblItemType
+(TypeID INT PRIMARY KEY,
+CategoryDescription VARCHAR(50));
+
+CREATE TABLE TblItem
+(ItemID CHAR(6) PRIMARY KEY,
+Description VARCHAR(300),
+ListPrice MONEY NOT NULL CHECK (ListPrice > 5),
+TypeID INT REFERENCES TblItemType(TypeID));
+
+CREATE TABLE TblOrderLine
+(OrderID CHAR(6) REFERENCES TblOrder (OrderID),
+ItemID CHAR(6) REFERENCES TblItem (ItemID),
+Quantity INT NOT NULL CHECK (Quantity > 0),
+Price MONEY NOT NULL CHECK (Price > 0),
+AddressID INT REFERENCES TblShipAddress(AddressID),
+PRIMARY KEY (OrderID, ItemID));
+
+CREATE TABLE TblItemLocation
+(ItemID CHAR(6) REFERENCES TblItem(ItemID),
+LocationID CHAR(2), 
+QtyOnHand INT,
+PRIMARY KEY (ItemID, LocationID));
+
+CREATE TABLE TblItemCostHistory
+(ItemID CHAR(6) REFERENCES TblItem(ItemID),
+LastCostDate DATETIME,
+LastCost MONEY NOT NULL,
+PRIMARY KEY (ItemID, LastCostDate));
+
+CREATE TABLE TblReview
+(ReviewID INT IDENTITY(1, 1) PRIMARY KEY,
+ReviewDate DATETIME, 
+Rating INT CHECK (Rating IN ('1', '2', '3', '4', '5')),
+ReviewText VARCHAR(500), 
+OrderID CHAR(6),
+ItemID CHAR(6),
+FOREIGN KEY (OrderID, ItemID) REFERENCES TblOrderLine(OrderID, ItemID));
+
+CREATE TABLE TblShipLine
+(DateShipped DATETIME,
+OrderID CHAR(6),
+ItemID CHAR(6), 
+LocationID CHAR(2),
+QtyShipped INT NOT NULL,
+MethodShipped VARCHAR(30) NOT NULL,
+FOREIGN KEY (OrderID, ItemID) REFERENCES TblOrderLine (OrderID, ItemID),
+FOREIGN KEY (ItemID, LocationID) REFERENCES TblItemLocation (ItemID, LocationID),
+PRIMARY KEY (DateShipped, OrderID, ItemID, LocationID));

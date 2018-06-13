@@ -1,0 +1,38 @@
+INSERT INTO Zipcode(Zipcode, City, State)
+SELECT DISTINCT AllWorkOrderTasks.CustomerZip,
+	   AllWorkOrderTasks.CustomerCity,
+	   AllWorkOrderTasks.CustomerState
+FROM AllWorkOrderTasks
+WHERE CustomerZip IS NOT NULL
+
+INSERT INTO Customer(CustomerID,
+					 Zipcode,
+					 CustomerName,
+					 Email,
+					 BillingAddress)
+SELECT DISTINCT AllWorkOrderTasks.CustomerID,
+	   AllWorkOrderTasks.CustomerZip,
+	   AllWorkOrderTasks.CustomerName,
+	   AllWorkOrderTasks.CustomerEmail,
+	   AllWorkOrderTasks.CustomerAddress
+FROM AllWorkOrderTasks		
+WHERE CustomerID IS NOT NULL
+			
+INSERT INTO WorkOrder(WorkOrderID,
+					  CustomerID,
+					  ManagerID,
+					  PrimaryWorkOrderID,
+					  DecisionDate,
+					  DateWritten,
+					  DateStarted,
+					  DateCompleted)
+SELECT DISTINCT AllWorkOrderTasks.WorkOrderID,
+	   AllWorkOrderTasks.CustomerID,
+	   AllWorkOrderTasks.EmpManagerID,
+	   AllWorkOrderTasks.PrimaryWorkOrderID,
+	   AllWorkOrderTasks.DateAccepted,
+	   AllWorkOrderTasks.DateProposed,
+	   AllWorkOrderTasks.DateStarted,
+	   AllWorkOrderTasks.DateCompleted
+FROM AllWorkOrderTasks
+WHERE WorkOrderID IS NOT NULL 

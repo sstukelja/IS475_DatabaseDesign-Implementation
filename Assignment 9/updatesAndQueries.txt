@@ -1,0 +1,297 @@
+?/* QUESTION 1 */
+/*
+UPDATE TblCustomer
+SET CustomerAffID = 21142
+WHERE LastName = 'stein' AND FirstName = 'martin'
+
+UPDATE TblCustomer
+SET CustomerAffID = 78112
+WHERE LastName = 'Dao' AND FirstName = 'Phong'
+
+UPDATE TblShipLine
+SET MethodShipped = LOWER(MethodShipped)
+
+UPDATE TblCustomer
+SET State = UPPER(State)
+
+DELETE TblOrder
+WHERE OrderID NOT IN (SELECT OrderID
+					  FROM TblOrderLine)
+*/
+
+/* QUESTION 2 */
+/*
+
+SELECT  TblOrder.OrderID,
+		CONVERT(VARCHAR, OrderDate, 107) 'Order Date',
+		TblCustomer.LastName + ', ' + SUBSTRING(TblCustomer.FirstName, 1, 1) + '.'	'Customer Name',
+		TblOrderLine.ItemID,
+		TblItem.Description,
+		TblOrderLine.Quantity 'Quantity Ordered',
+		vTotalShipped.TotalShipped,
+		TblOrderLine.Quantity - vTotalShipped.TotalShipped 'Quantity Remaining',
+		CASE 
+			WHEN vTotalShipped.TotalShipped = 0 THEN 'Not Shipped'
+			WHEN TblOrderLine.Quantity - vTotalShipped.TotalShipped = 0 THEN 'Completely Shipped'
+			WHEN TblOrderLine.Quantity - vTotalShipped.TotalShipped < 0 THEN 'Over Shipped'
+			WHEN TblOrderLine.Quantity - vTotalShipped.TotalShipped > 0 THEN 'Partially Shipped'
+			END ShippingStatus
+FROM TblOrder
+INNER JOIN TblCustomer
+ON TblCustomer.CustomerID = TblOrder.CustomerID
+INNER JOIN TblOrderLine
+ON TblOrderLine.OrderID = TblOrder.OrderID
+INNER JOIN TblItem
+ON TblItem.ItemID = TblOrderLine.ItemID
+INNER JOIN vTotalShipped
+ON vTotalShipped.OrderID = TblOrder.OrderID AND vTotalShipped.ItemID = TblOrderLine.ItemID
+ORDER BY TblOrderLine.OrderID, TblOrderLine.ItemID
+
+
+/* QUESTION 3 */ 
+
+SELECT * 
+FROM vCustomerOrderShippingInfo
+WHERE vCustomerOrderShippingInfo.QuantityOrdered - vCustomerOrderShippingInfo.TotalShipped < 0
+ORDER BY vCustomerOrderShippingInfo.OrderID, vCustomerOrderShippingInfo.ItemID
+
+
+
+/* QUESTION 4 */
+
+SELECT  TblOrder.OrderID,
+		CONVERT(VARCHAR, TblOrder.OrderDate, 101) DateOrdered,
+		Cust.CustomerID,
+		Cust.LastName + ', ' + Cust.FirstName CustomerName,
+		FORMAT(CAST(Cust.Phone AS BIGINT), '###-###-####') CustomerPhone,
+		UPPER(Cust.City + ', ' + Cust.State) Location,
+		Cust.CustomerAffID AffiliatedCustID,
+		AffCust.LastName + ', ' + AffCust.FirstName + '.' AffiliatedCustomerName,		
+		FORMAT(CAST(AffCust.Phone AS BIGINT), '###-###-####') AffiliatedCustomerPhone
+FROM TblCustomer Cust
+LEFT OUTER JOIN TblCustomer AffCust
+ON cust.CustomerAffID = AffCust.CustomerID
+INNER JOIN TblOrder
+ON TblOrder.CustomerID = Cust.CustomerID
+WHERE TblOrder.OrderID IN (SELECT OrderID
+						  FROM vOpenOrders)
+ORDER BY TblOrder.OrderID
+
+*/
+
+/* QUESTION 5 */
+
+/*
+SELECT * 
+FROM vCustomerShippingStats
+WHERE vCustomerShippingStats.OrderID NOT IN (SELECT *
+										 FROM vOpenOrders)
+ORDER BY OrderID
+
+
+
+/* QUESTION 6 */  
+WITH cteItemPriceStats AS
+(SELECT  TblItem.ItemID,
+		ISNULL(SUM(TblOrderLine.Quantity), 0) TotalQuantityOnOrder,
+		COUNT(TblOrderLine.OrderID) NumberOfOrders,
+		ISNULL(MAX(TblOrderLine.Price), 0) MostExpensivePrice,
+		ISNULL(MIN(TblOrderLine.Price), 0) LeastExpensivePrice, 
+		ISNULL(AVG(TblOrderLine.Price), 0) AveragePrice
+FROM TblOrderLine
+RIGHT OUTER JOIN TblItem
+ON TblItem.ItemID = TblOrderLine.ItemID
+GROUP BY TblItem.ItemID),
+
+cteLastCostStats AS 
+(SELECT	ItemID,
+		MAX(LastCost) MostExpensiveCost,
+		MIN(LastCost) LeastExpensiveCost,
+		AVG(LastCost) AverageCost,
+		MAX(LastCostDate) LastCostDate
+FROM TblItemCostHistory
+GROUP BY ItemID)
+
+SELECT  TblItem.ItemID,
+		TblItem.Description,
+		TblItemType.CategoryDescription,
+		cteItemPriceStats.TotalQuantityOnOrder,
+		cteItemPriceStats.NumberOfOrders,
+		cteItemPriceStats.MostExpensivePrice,
+		cteItemPriceStats.LeastExpensivePrice,
+		ISNULL(cteItemPriceStats.AveragePrice, 0),
+		ISNULL(cteLastCostStats.MostExpensiveCost, 0),
+		ISNULL(cteLastCostStats.LeastExpensiveCost, 0),
+		ISNULL(cteLastCostStats.AverageCost, 0),
+		ISNULL(CONVERT(VARCHAR, cteLastCostStats.LastCostDate, 107), 'No Previous Purchase') LastCostDate,
+		vLastCost.LastCostPaid
+FROM TblItem
+INNER JOIN TblItemType
+ON TblItemType.TypeID = TblItem.TypeID
+INNER JOIN cteItemPriceStats
+ON cteItemPriceStats.ItemID = TblItem.ItemID
+LEFT OUTER JOIN cteLastCostStats
+ON cteLastCostStats.ItemID = TblItem.ItemID
+INNER JOIN vLastCost
+ON vLastCost.ItemID = TblItem.ItemID
+ORDER BY TblItem.ItemID
+
+
+/* QUESTION 7 */ 
+
+
+SELECT	TblCustomer.LastName + ', ' + TblCustomer.FirstName CustomerName,
+		TblOrder.OrderID,
+		CONVERT(VARCHAR, TblOrder.OrderDate, 107) OrderDate,
+		TblOrderLine.ItemID,
+		TblItem.Description ItemDescription,
+		TblOrderLine.Price PricePaid,
+		vLastCost.LastCostPaid,
+		CONVERT(VARCHAR, vLastCost.LastCostDate, 107) LastCostDate,
+		TblOrderLine.Price - vLastCost.LastCostPaid DifferenceBetweenPriceandCost
+FROM TblCustomer
+INNER JOIN TblOrder
+ON TblOrder.CustomerID = TblCustomer.CustomerID
+INNER JOIN TblOrderLine
+ON TblOrderLine.OrderID = TblOrder.OrderID
+INNER JOIN TblItem
+ON TblItem.ItemID = TblOrderLine.ItemID
+INNER JOIN vLastCost
+ON vLastCost.ItemID = TblOrderLine.ItemID
+INNER JOIN vMinPrice
+ON vMinPrice.ItemID = TblOrderLine.ItemID
+WHERE TblItem.Description LIKE 'Diplomacy%' AND vMinPrice.MinimumPrice = TblOrderLine.Price
+
+
+
+/* QUESTION 8 */
+SELECT	TblOrder.OrderID,
+		CONVERT(VARCHAR, TblOrder.OrderDate, 107) DateOrdered,
+		TblCustomer.CustomerID,
+		TblCustomer.LastName,
+		TblCustomer.FirstName,
+		vProfitPerOrder.OrderProfit
+FROM TblOrder
+INNER JOIN TblCustomer
+ON TblCustomer.CustomerID = TblOrder.CustomerID
+INNER JOIN vProfitPerOrder 
+ON vProfitPerOrder.OrderID = TblOrder.OrderID
+ORDER BY TblOrder.OrderID
+
+
+WITH cteHighestProfitOrder AS 
+(SELECT OrderID
+FROM vProfitPerOrder
+WHERE OrderProfit = (SELECT MAX(OrderProfit)
+					 FROM vProfitPerOrder)) 
+
+
+/* QUESTION 9 */
+SELECT	TblOrder.OrderID,
+		CONVERT(VARCHAR, TblOrder.OrderDate, 107) DateOrdered,
+		TblCustomer.FirstName + ' ' + TblCustomer.LastName CustomerName,
+		TblOrderLine.ItemID,
+		TblItem.Description ItemDescription,
+		TblOrderLine.Quantity QtyOrdered,
+		TblOrderLine.Price ItemPrice,
+		vLastCost.LastCostPaid,
+		TblOrderLine.Price - vLastCost.LastCostPaid DifferenceBetweenPriceAndCost,
+		TblOrderLine.Quantity * (TblOrderLine.Price - vLastCost.LastCostPaid) ExtendedDifference
+FROM TblOrder
+INNER JOIN TblCustomer
+ON TblCustomer.CustomerID = TblOrder.CustomerID
+INNER JOIN TblOrderLine
+ON TblOrderLine.OrderID = TblOrder.OrderID
+INNER JOIN TblItem
+ON TblItem.ItemID = TblOrderLine.ItemID
+INNER JOIN cteHighestProfitOrder
+ON cteHighestProfitOrder.OrderID = TblOrder.OrderID
+INNER JOIN vLastCost
+ON vLastCost.ItemID = TblOrderline.ItemID
+ORDER BY TblOrderLine.ItemID
+
+*/
+
+/* QUESTION 10 */
+/*
+WITH cteMaxSold AS 
+(SELECT	vTotalQuantitySold.ItemID,
+		vTotalQuantitySold.TotalQuantity TotalQuantitySold
+FROM vTotalQuantitySold
+WHERE vTotalQuantitySold.TotalQuantity = (SELECT MAX(TotalQuantity)
+										  FROM vTotalQuantitySold
+										  WHERE vTotalQuantitySold.State = 'NV'))
+
+SELECT	cteMaxSold.ItemID,
+		TblItem.Description,
+		cteMaxSold.TotalQuantitySold,
+		vLastCost.LastCostPaid,
+		CONVERT(VARCHAR, vLastCost.LastCostDate, 107) LastCostDate
+FROM TblOrder
+INNER JOIN TblOrderLine
+ON TblOrder.OrderID = TblOrderLine.OrderID
+INNER JOIN TblItem
+ON TblItem.ItemID = TblOrderLine.ItemID
+INNER JOIN TblCustomer
+ON TblCustomer.CustomerID = TblOrder.CustomerID
+INNER JOIN vLastCost
+ON vLastCost.ItemID = TblOrderLine.ItemID
+INNER JOIN cteMaxSold 
+ON cteMaxSold.ItemID = TblOrderLine.ItemID
+WHERE TblOrderLine.ItemID = cteMaxSold.ItemID
+GROUP BY cteMaxSold.ItemID, TblItem.Description, vLastCost.LastCostPaid, vLastCost.LastCostDate, cteMaxSold.TotalQuantitySold
+*/
+/*
+/* QUESTION 11 */
+WITH cteTotalInventory AS
+(SELECT	ItemID,
+		SUM(QtyOnHand) TotalQuantityInInventory
+FROM TblItemLocation
+GROUP BY ItemID),
+
+cteRemainingItems AS 
+(SELECT	TblOrderLine.ItemID,
+		SUM(TblOrderLine.Quantity - vTotalShipped.TotalShipped) LeftToShip
+FROM TblOrderLine
+INNER JOIN vTotalShipped
+ON vTotalShipped.ItemID = TblOrderLine.ItemID AND vTotalShipped.OrderID = TblOrderLine.OrderID
+WHERE TblOrderLine.Quantity - vTotalShipped.TotalShipped > 0
+GROUP BY TblOrderLine.ItemID)
+
+SELECT	TblItem.ItemID,
+		TblItem.Description,
+		cteRemainingItems.LeftToShip 'Total Left To Ship',
+		cteTotalInventory.TotalQuantityInInventory 'Total Available in Inventory',
+		cteRemainingItems.LeftToShip - cteTotalInventory.TotalQuantityInInventory 'Quantity Short'
+FROM TblItem
+INNER JOIN cteTotalInventory
+ON cteTotalInventory.ItemID = TblItem.ItemID
+INNER JOIN cteRemainingItems
+ON cteRemainingItems.ItemID = TblItem.ItemID
+WHERE cteRemainingItems.LeftToShip - cteTotalInventory.TotalQuantityInInventory > 0
+
+*/
+
+SELECT * 
+FROM TblOrder
+WHERE OrderID NOT IN (SELECT OrderID FROM vOpenOrders)
+/* QUESTION 12 */
+/*
+CREATE TABLE TblClosedOrder(OrderID CHAR(6) REFERENCES TblOrder(OrderID),
+							OrderDate DATETIME NOT NULL,
+							DiscountCode CHAR(2) CHECK (DiscountCode IN ('02', '03', '04', '06', '08', '10', 'A1', 'B3')),
+							CreditCode CHAR(3) NOT NULL,
+							CustomerID Char(5) NOT NULL REFERENCES TblCustomer(CustomerID),
+							AddressID INT REFERENCES TblShipAddress(AddressID),
+							DateMoved DATETIME NOT NULL,
+							PRIMARY KEY (OrderID))
+
+
+INSERT INTO TblClosedOrder VALUES 
+('123000', '2018-02-02', 'A1', '111', '00405', NULL, GETDATE()),
+('300221', '2018-01-26', '03', '231', '07831', 20, GETDATE()),
+('445511', '2018-02-15', '02', '444', '32018', NULL, GETDATE()),
+('651222', '2018-01-29', NULL, '111', '12006', NULL, GETDATE()),
+('671100', '2018-02-19', NULL, '111', '32018', NULL, GETDATE()),	
+('980001', '2018-01-22', '04', '444', '78112', NULL, GETDATE())
+*/
